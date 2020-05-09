@@ -1,0 +1,13 @@
+version: '3'
+services:
+  toucan_toco_test_project_server:
+    build: .
+    image: toucan_toco_test_project_server
+    command: flask run --host=0.0.0.0 --port 5000
+    volumes:
+      - ..:/code
+    ports:
+      - 5000:5000
+    env_file:
+      - .env.development
+
