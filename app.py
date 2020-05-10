@@ -8,7 +8,7 @@ from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 
 app = Flask(__name__)
-CORS(app, origins=[os.getenv('FRONT_URL', '')], supports_credentials=True)
+CORS(app, origins=[os.getenv("FRONT_URL", "")], supports_credentials=True)
 
 
 @app.route("/")
@@ -27,9 +27,9 @@ def pathstats():
         # but don't forget to call .resolve() first on rootdir to prevent relative path abuse
         rootdir = Path(rootdir).resolve()
         stats = walktree(rootdir, maxlevel)
-        return jsonify({'name': str(rootdir), 'type': 'DIR', 'content': stats})
+        return jsonify({"name": str(rootdir), "type": "DIR", "content": stats})
     except (ValueError, AssertionError):  # maxlevel can't be converted to int
-        raise BadRequest('maxlevel should be a positive int')
+        raise BadRequest("maxlevel should be a positive int")
 
 
 def walktree(rootdir, maxlevel=None):
@@ -46,25 +46,30 @@ def walktree(rootdir, maxlevel=None):
                 continue
             mode = f_path.stat().st_mode
             if stat.S_ISDIR(mode):
-                dirstats.append({'name': f_path.name, 'type': 'DIR', 'content': walktree(f_path, maxlevel)})
+                dirstats.append(
+                    {
+                        "name": f_path.name,
+                        "type": "DIR",
+                        "content": walktree(f_path, maxlevel),
+                    }
+                )
             elif stat.S_ISREG(mode):
-                dirstats.append({'name': f_path.name, 'type': 'FILE', 'props': filestats(f_path)})
+                dirstats.append(
+                    {"name": f_path.name, "type": "FILE", "props": filestats(f_path)}
+                )
         return dirstats
-    except FileNotFoundError as e:
-        raise BadRequest(f'rootdir {rootdir} doesn\'t exists')
+    except FileNotFoundError:
+        raise BadRequest(f"rootdir {rootdir} doesn't exists")
 
 
 def filestats(filepath):
     stats = filepath.stat()
-    return {
-        prop: getattr(stats, prop)
-        for prop in dir(stats)
-        if prop.startswith("st_")
-    }
+    return {prop: getattr(stats, prop) for prop in dir(stats) if prop.startswith("st_")}
 
 
 if __name__ == "__main__":
     rootdir = sys.argv[1] if len(sys.argv) == 2 else "."
+    rootdir = Path(rootdir).resolve()
     from pprint import pprint as pp
 
     pp(walktree(rootdir, 2))
