@@ -3,6 +3,10 @@ import stat
 import sys
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app, origins=[os.getenv('FRONT_URL', '')], supports_credentials=True)
 
 
 @app.route("/")
@@ -14,6 +18,9 @@ def hello_world():
 def pathstats():
     rootdir = request.args.get("rootdir", os.getcwd())
     maxlevel = int(request.args.get("maxlevel", 1))
+    # TODO validation that given rootdir only gives access to permitted directories
+    # for that you can probably just use pathlib's .parents or .relative_to(),
+    # but don't forget to call .resolve() first on rootdir to prevent relative path abuse
     stats = walktree(rootdir, maxlevel)
     return jsonify(stats)
 
