@@ -1,6 +1,7 @@
 import os
 import stat
 import sys
+from pathlib import Path
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -17,13 +18,14 @@ def hello_world():
 
 @app.route("/stat")
 def pathstats():
-    rootdir = request.args.get("rootdir", os.getcwd())
+    rootdir = request.args.get("rootdir", Path.cwd())
     try:
         maxlevel = int(request.args.get("maxlevel", 1))
         assert maxlevel > 0
         # TODO validation that given rootdir only gives access to permitted directories
         # for that you can probably just use pathlib's .parents or .relative_to(),
         # but don't forget to call .resolve() first on rootdir to prevent relative path abuse
+        rootdir = Path(rootdir).resolve()
         stats = walktree(rootdir, maxlevel)
         return jsonify(stats)
     except (ValueError, AssertionError):  # maxlevel can't be converted to int
@@ -37,18 +39,23 @@ def walktree(rootdir, maxlevel=None):
         maxlevel -= 1
 
     dirstats = []
-    for f in os.listdir(rootdir):
-        pathname = os.path.join(rootdir, f)
-        mode = os.stat(pathname).st_mode
-        if stat.S_ISDIR(mode):
-            dirstats.append({'name': f, 'type': 'DIR', 'content': walktree(pathname, maxlevel)})
-        elif stat.S_ISREG(mode):
-            dirstats.append({'name': f, 'type': 'FILE', 'props': filestats(pathname)})
-    return dirstats
+    try:
+        for f_path in rootdir.iterdir():
+            if not f_path.exists():
+                # prevent error by trying to read fd that doesn't exist anymore
+                continue
+            mode = f_path.stat().st_mode
+            if stat.S_ISDIR(mode):
+                dirstats.append({'name': f_path.name, 'type': 'DIR', 'content': walktree(f_path, maxlevel)})
+            elif stat.S_ISREG(mode):
+                dirstats.append({'name': f_path.name, 'type': 'FILE', 'props': filestats(f_path)})
+        return dirstats
+    except FileNotFoundError as e:
+        raise BadRequest(f'rootdir {rootdir} doesn\'t exists')
 
 
 def filestats(filepath):
-    stats = os.stat(filepath)
+    stats = filepath.stat()
     return {
         prop: getattr(stats, prop)
         for prop in dir(stats)
