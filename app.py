@@ -27,7 +27,7 @@ def pathstats():
         # but don't forget to call .resolve() first on rootdir to prevent relative path abuse
         rootdir = Path(rootdir).resolve()
         stats = walktree(rootdir, maxlevel)
-        return jsonify(stats)
+        return jsonify({'name': str(rootdir), 'type': 'DIR', 'content': stats})
     except (ValueError, AssertionError):  # maxlevel can't be converted to int
         raise BadRequest('maxlevel should be a positive int')
 
