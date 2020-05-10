@@ -36,14 +36,14 @@ def walktree(rootdir, maxlevel=None):
             return None
         maxlevel -= 1
 
-    dirstats = {}
+    dirstats = []
     for f in os.listdir(rootdir):
         pathname = os.path.join(rootdir, f)
         mode = os.stat(pathname).st_mode
         if stat.S_ISDIR(mode):
-            dirstats[f] = walktree(pathname, maxlevel)
+            dirstats.append({'name': f, 'type': 'DIR', 'content': walktree(pathname, maxlevel)})
         elif stat.S_ISREG(mode):
-            dirstats[f] = filestats(pathname)
+            dirstats.append({'name': f, 'type': 'FILE', 'props': filestats(pathname)})
     return dirstats
 
 
